@@ -19,3 +19,10 @@ This project aims to provide a single location-based platform where travelers ca
 ## Target Users
 
 The primary users are travelers interested in authentic local experiences, handmade products, traditional craftsmanship, and cultural heritage.
+
+## Project Goals
+
+- Help travelers discover authentic handmade and local crafts based on location.
+- Provide information about the cultural background and origin of local crafts.
+- Allow users to rate and review crafts they have discovered.
+- Make traditional and culturally significant products easier to discover while traveling.
