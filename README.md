@@ -26,3 +26,43 @@ The primary users are travelers interested in authentic local experiences, handm
 - Provide information about the cultural background and origin of local crafts.
 - Allow users to rate and review crafts they have discovered.
 - Make traditional and culturally significant products easier to discover while traveling.
+
+## Current demo
+
+The discovery page lists craft records from Django. Visitors can narrow the list
+by district and category and open a craft to see its description, materials, and
+photo when one is available. Use Django Admin to add or edit records and upload
+photos. The demo records represent fictional workshops.
+
+### Run locally
+
+Activate a Python virtual environment, then run these commands from the repository root.
+
+```sh
+python -m pip install -r requirements.txt
+python manage.py migrate
+python manage.py loaddata demo_crafts
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+Load the optional fixture into a fresh local database. It uses fixed IDs for the
+three demo records. In a second terminal with Node.js 24 installed, run the frontend.
+
+```sh
+cd frontend
+npm ci
+npm run dev
+```
+
+Open the URL printed by Vite. For the demo, select Kadıköy and Seramik and open
+Moda Seramik Atölyesi. To demonstrate images, add a photo to that record at
+`http://127.0.0.1:8000/admin/` and reopen the craft detail page.
+
+| API endpoint | Purpose |
+| --- | --- |
+| `GET /api/crafts/` | List records. Optional `location` and `category` query parameters accept exact names with case-insensitive matching where supported by the database. |
+| `GET /api/crafts/<id>/` | Read a craft record. Unknown IDs return HTTP 404. |
+
+Run `python manage.py test` for backend checks and `npm run build` inside
+`frontend/` to build the React app. Reviews and the map are planned features.

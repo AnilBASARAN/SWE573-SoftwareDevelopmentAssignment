@@ -1,0 +1,35 @@
+[
+  {
+    "model": "crafts.craft",
+    "pk": 573001,
+    "fields": {
+      "name": "Moda Seramik Atölyesi",
+      "description": "Demo kaydı. El yapımı seramik fincan ve kaseler, şekillendirme ve sırlama çalışmaları.",
+      "category": "Seramik",
+      "location": "Kadıköy",
+      "materials": "Kil, sır"
+    }
+  },
+  {
+    "model": "crafts.craft",
+    "pk": 573002,
+    "fields": {
+      "name": "Yeldeğirmeni Baskı Atölyesi",
+      "description": "Demo kaydı. El oyma kalıplarla kâğıt üzerine baskı örnekleri.",
+      "category": "Baskı",
+      "location": "Kadıköy",
+      "materials": "Linolyum, kâğıt, baskı mürekkebi"
+    }
+  },
+  {
+    "model": "crafts.craft",
+    "pk": 573003,
+    "fields": {
+      "name": "Kuzguncuk Dokuma Atölyesi",
+      "description": "Demo kaydı. Tezgâhta dokunan küçük tekstil ürünleri.",
+      "category": "Dokuma",
+      "location": "Üsküdar",
+      "materials": "Pamuk, yün"
+    }
+  }
+]
