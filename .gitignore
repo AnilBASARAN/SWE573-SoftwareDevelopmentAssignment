@@ -11,3 +11,7 @@ db.sqlite3
 
 # Uploaded images
 media/
+
+# React frontend
+node_modules/
+dist/

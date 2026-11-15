@@ -9,11 +9,15 @@ class Craft(models.Model):
     location = models.CharField(max_length=200)
     materials = models.CharField(max_length=200)
     weight = models.PositiveIntegerField(null=True, blank=True)
+
     image = models.ImageField(
         upload_to='crafts/',
         null=True,
         blank=True
     )
+
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return self.name
