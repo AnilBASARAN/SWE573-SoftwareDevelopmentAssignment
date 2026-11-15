@@ -1,9 +1,46 @@
 
+import { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import './App.css'
 
+type Craft = {
+  id: number
+  name: string
+  description: string
+  category: string
+  location: string
+  image: string | null
+  latitude: number | null
+  longitude: number | null
+}
+
 function App() {
+  const [crafts, setCrafts] = useState<Craft[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    async function loadCrafts() {
+      try {
+        const response = await fetch('/api/crafts/')
+
+        if (!response.ok) {
+          throw new Error('Could not load crafts')
+        }
+
+        const data: Craft[] = await response.json()
+        setCrafts(data)
+      } catch {
+        setError('Failed to connect to Django API')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadCrafts()
+  }, [])
+
   return (
     <div className="app">
       <header className="header">
@@ -13,7 +50,7 @@ function App() {
 
       <main className="map-wrapper">
         <MapContainer
-          center={[30, 10]}
+          center={[30, 0]}
           zoom={2}
           minZoom={2}
           style={{ height: '100%', width: '100%' }}
@@ -23,14 +60,40 @@ function App() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          <Marker position={[40.15, 26.41]}>
-            <Popup>
-              <strong>Handmade Craft</strong>
-              <p>Çanakkale, Türkiye</p>
-              <small>Demo product location</small>
-            </Popup>
-          </Marker>
+          {crafts
+            .filter(
+              craft =>
+                craft.latitude !== null &&
+                craft.longitude !== null
+            )
+            .map(craft => (
+              <Marker
+                key={craft.id}
+                position={[craft.latitude!, craft.longitude!]}
+              >
+                <Popup>
+                  <div style={{ minWidth: '180px' }}>
+                    <h3>{craft.name}</h3>
+
+                    {craft.image && (
+                      <img
+                        src={craft.image}
+                        alt={craft.name}
+                        style={{ width: '100%', borderRadius: '6px' }}
+                      />
+                    )}
+
+                    <p>{craft.description}</p>
+                    <p>📍 {craft.location}</p>
+                    <small>{craft.category}</small>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
         </MapContainer>
+
+        {loading && <div className="map-status">Loading crafts...</div>}
+        {error && <div className="map-status">{error}</div>}
       </main>
     </div>
   )
