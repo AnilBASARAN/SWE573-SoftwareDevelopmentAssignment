@@ -34,3 +34,10 @@ body {
   flex: 1;
   min-height: 0;
 }
+
+.app { height: 100dvh; }
+.map-wrapper { position: relative; }
+.leaflet-container { background: #aad3df; }
+.map-status { position: absolute; z-index: 1000; bottom: 24px; left: 12px; background: white; padding: 8px; border-radius: 6px; }
+.header input, .header select, .header button { font: inherit; border-radius: 5px; border: 1px solid #b9c8c4; padding: 8px; }
+@media (max-width: 600px) { .header { padding: 12px; } .header h1 { font-size: 18px; } }
