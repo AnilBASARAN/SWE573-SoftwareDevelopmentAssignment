@@ -41,3 +41,10 @@ body {
 .map-status { position: absolute; z-index: 1000; bottom: 24px; left: 12px; background: white; padding: 8px; border-radius: 6px; }
 .header input, .header select, .header button { font: inherit; border-radius: 5px; border: 1px solid #b9c8c4; padding: 8px; }
 @media (max-width: 600px) { .header { padding: 12px; } .header h1 { font-size: 18px; } }
+
+.account-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; overflow-wrap: anywhere; }
+.form-panel { position: fixed; z-index: 2000; inset: 0; background: #0008; display: grid; place-items: center; padding: 16px; }
+.form-panel form { background: white; color: #173b35; width: min(480px, 100%); max-height: 90dvh; overflow: auto; padding: 20px; border-radius: 12px; }
+.form-panel label { display: grid; gap: 4px; margin-bottom: 10px; }
+.form-panel input, .form-panel textarea, .form-panel button { font: inherit; padding: 8px; max-width: 100%; }
+.form-panel button { margin-right: 8px; }
