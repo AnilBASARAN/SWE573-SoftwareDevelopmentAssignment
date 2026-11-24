@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import './App.css'
@@ -17,6 +18,39 @@ type Craft = {
 
 function App() {
   const [crafts, setCrafts] = useState<Craft[]>([])
+  const [token, setToken] = useState('')
+  const [panel, setPanel] = useState<'login' | 'register' | 'craft' | ''>('')
+  const [notice, setNotice] = useState('')
+  const [busy, setBusy] = useState(false)
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    setBusy(true)
+    setNotice('')
+    try {
+      const creating = panel === 'craft'
+      const response = await fetch(creating ? '/api/crafts/' : '/api/auth/' + panel + '/', {
+        method: 'POST',
+        headers: creating ? { Authorization: 'Token ' + token } : { 'Content-Type': 'application/json' },
+        body: creating ? (form.get('image') instanceof File && (form.get('image') as File).size === 0 ? (form.delete('image'), form) : form) : JSON.stringify({ username: form.get('username'), password: form.get('password') }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(JSON.stringify(data))
+      if (creating) {
+        setCrafts(previous => [...previous, data as Craft])
+        setSearch('')
+        setCategory('')
+      } else {
+        setToken(data.token)
+      }
+      setPanel('')
+      setNotice(creating ? 'Craft published!' : 'Signed in successfully.')
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Request failed')
+    } finally {
+      setBusy(false)
+    }
+  }
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [loading, setLoading] = useState(true)
@@ -68,7 +102,38 @@ function App() {
           <button type="button" onClick={() => { setSearch(''); setCategory('') }}>Clear filters</button>
           <span role="status">{loading ? 'Loading crafts...' : error ? error : visibleCrafts.length === 0 ? 'No matching crafts on the map' : visibleCrafts.length + ' crafts on the map'}</span>
         </div>
+        <div className="account-controls">
+          {token ? <>
+            <button onClick={() => { setPanel('craft'); setNotice('') }}>Add a craft</button>
+            <button onClick={() => { setToken(''); setPanel(''); setNotice('Signed out locally.') }}>Log out</button>
+          </> : <>
+            <button onClick={() => { setPanel('login'); setNotice('') }}>Log in</button>
+            <button onClick={() => { setPanel('register'); setNotice('') }}>Register</button>
+          </>}
+          <span role="status">{notice}</span>
+        </div>
       </header>
+      {panel && <section className="form-panel">
+        <form key={panel} onSubmit={submit}>
+          <h2>{panel === 'craft' ? 'Add a craft' : panel === 'login' ? 'Log in' : 'Register'}</h2>
+          {panel === 'craft' ? <>
+            <label>Name<input name="name" required maxLength={200} /></label>
+            <label>Description<textarea name="description" required /></label>
+            <label>Category<input name="category" required maxLength={100} /></label>
+            <label>Location (public region)<input name="location" required maxLength={200} /></label>
+            <label>Materials<input name="materials" required maxLength={200} /></label>
+            <label>Weight (grams)<input name="weight" type="number" min="0" /></label>
+            <label>Latitude (approximate)<input name="latitude" type="number" step="any" min="-85" max="85" required /></label>
+            <label>Longitude (approximate)<input name="longitude" type="number" step="any" min="-180" max="180" required /></label>
+            <label>Photo<input name="image" type="file" accept="image/*" /></label>
+          </> : <>
+            <label>Username<input name="username" required autoComplete="username" /></label>
+            <label>Password<input name="password" type="password" required autoComplete={panel === 'login' ? 'current-password' : 'new-password'} /></label>
+          </>}
+          <button disabled={busy} type="submit">{busy ? 'Please wait...' : panel === 'craft' ? 'Publish craft' : 'Continue'}</button>
+          <button disabled={busy} type="button" onClick={() => setPanel('')}>Cancel</button>
+        </form>
+      </section>}
 
       <main className="map-wrapper">
         <MapContainer
