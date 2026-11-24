@@ -17,6 +17,8 @@ type Craft = {
 
 function App() {
   const [crafts, setCrafts] = useState<Craft[]>([])
+  const [search, setSearch] = useState('')
+  const [category, setCategory] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -41,11 +43,31 @@ function App() {
     loadCrafts()
   }, [])
 
+  const categories = [...new Set(crafts.map(craft => craft.category))].sort()
+  const visibleCrafts = crafts.filter(craft =>
+    craft.latitude !== null &&
+    craft.longitude !== null &&
+    craft.name.toLowerCase().includes(search.trim().toLowerCase()) &&
+    (!category || craft.category === category)
+  )
+
   return (
     <div className="app">
       <header className="header">
         <h1>🌍 Local Craft Discovery Guide</h1>
         <p>Discover handmade crafts around the world</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px', alignItems: 'center' }}>
+          <input aria-label="Search crafts by name" placeholder="Search crafts..." type="search"
+            value={search} onChange={event => setSearch(event.target.value)}
+            style={{ padding: '8px', flex: '1 1 180px', minWidth: 0 }} />
+          <select aria-label="Filter by category" value={category}
+            onChange={event => setCategory(event.target.value)} style={{ padding: '8px', maxWidth: '100%' }}>
+            <option value="">All categories</option>
+            {categories.map(item => <option key={item} value={item}>{item}</option>)}
+          </select>
+          <button type="button" onClick={() => { setSearch(''); setCategory('') }}>Clear filters</button>
+          <span role="status">{loading ? 'Loading crafts...' : error ? error : visibleCrafts.length === 0 ? 'No matching crafts on the map' : visibleCrafts.length + ' crafts on the map'}</span>
+        </div>
       </header>
 
       <main className="map-wrapper">
@@ -60,13 +82,7 @@ function App() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          {crafts
-            .filter(
-              craft =>
-                craft.latitude !== null &&
-                craft.longitude !== null
-            )
-            .map(craft => (
+          {visibleCrafts.map(craft => (
               <Marker
                 key={craft.id}
                 position={[craft.latitude!, craft.longitude!]}
