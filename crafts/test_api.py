@@ -34,3 +34,28 @@ class CraftAPITests(APITestCase):
         self.assertEqual(response.status_code, 201)
         self.assertIn('token', response.data)
         self.assertEqual(self.client.post('/api/auth/login/', credentials, format='json').status_code, 200)
+
+    def test_owner_permissions(self):
+        User = get_user_model()
+        owner = User.objects.create_user(username='owner')
+        other = User.objects.create_user(username='other')
+        self.client.force_authenticate(user=owner)
+        created = self.client.post('/api/crafts/', self.payload, format='json')
+        self.assertEqual(created.status_code, 201)
+        self.assertTrue(created.data['can_edit'])
+        url = f"/api/crafts/{created.data['id']}/"
+        self.client.force_authenticate(user=other)
+        self.assertFalse(self.client.get(url).data['can_edit'])
+        self.assertEqual(self.client.patch(url, {'name': 'Unauthorized'}, format='json').status_code, 403)
+        self.assertEqual(self.client.delete(url).status_code, 403)
+        self.client.force_authenticate(user=owner)
+        self.assertEqual(self.client.patch(url, {'name': 'Updated'}, format='json').status_code, 200)
+        self.assertEqual(self.client.delete(url).status_code, 204)
+
+    def test_legacy_craft_cannot_be_claimed(self):
+        from .models import Craft
+        craft = Craft.objects.create(**self.payload)
+        user = get_user_model().objects.create_user(username='contributor')
+        self.client.force_authenticate(user=user)
+        url = f'/api/crafts/{craft.pk}/'
+        self.assertEqual(self.client.patch(url, {'owner': user.pk}, format='json').status_code, 403)
