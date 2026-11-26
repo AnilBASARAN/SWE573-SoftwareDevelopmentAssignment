@@ -78,6 +78,7 @@ function App() {
       if (!response.ok && response.status !== 401) throw new Error('Logout failed; please retry.')
       sessionStorage.removeItem('craftToken')
       setToken('')
+      setMineOnly(false)
       setPanel('')
       setNotice('Signed out.')
     } catch (err) {
@@ -99,6 +100,7 @@ function App() {
     }
   }
 
+  const [mineOnly, setMineOnly] = useState(false)
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [loading, setLoading] = useState(true)
@@ -138,7 +140,8 @@ function App() {
   const visibleCrafts = crafts.filter(craft =>
     craft.latitude !== null &&
     craft.longitude !== null &&
-    craft.name.toLowerCase().includes(search.trim().toLowerCase()) &&
+    (!token || !mineOnly || craft.can_edit) &&
+    [craft.name, craft.category, craft.location, craft.materials].some(value => value.toLowerCase().includes(search.trim().toLowerCase())) &&
     (!category || craft.category === category)
   )
 
@@ -148,7 +151,7 @@ function App() {
         <h1>🌍 Local Craft Discovery Guide</h1>
         <p>Discover handmade crafts around the world</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px', alignItems: 'center' }}>
-          <input aria-label="Search crafts by name" placeholder="Search crafts..." type="search"
+          <input aria-label="Search crafts by name, category, location or materials" placeholder="Search crafts..." type="search"
             value={search} onChange={event => setSearch(event.target.value)}
             style={{ padding: '8px', flex: '1 1 180px', minWidth: 0 }} />
           <select aria-label="Filter by category" value={category}
@@ -156,12 +159,13 @@ function App() {
             <option value="">All categories</option>
             {categories.map(item => <option key={item} value={item}>{item}</option>)}
           </select>
-          <button type="button" onClick={() => { setSearch(''); setCategory('') }}>Clear filters</button>
+          <button type="button" onClick={() => { setSearch(''); setCategory(''); setMineOnly(false) }}>Clear filters</button>
           <span role="status">{loading ? 'Loading crafts...' : error ? error : visibleCrafts.length === 0 ? 'No matching crafts on the map' : visibleCrafts.length + ' crafts on the map'}</span>
         </div>
         <div className="account-controls">
           {token ? <>
             <button onClick={() => { setEditing(null); setLatitude(''); setLongitude(''); setPanel('craft'); setNotice('') }}>Add a craft</button>
+            <button aria-pressed={mineOnly} onClick={() => setMineOnly(value => !value)}>{mineOnly ? 'Show all crafts' : 'My crafts'}</button>
             <button onClick={() => void logout()}>Log out</button>
           </> : <>
             <button onClick={() => { setPanel('login'); setNotice('') }}>Log in</button>
@@ -171,7 +175,7 @@ function App() {
         </div>
       </header>
       {panel && <section className="form-panel">
-        <form key={panel} onSubmit={submit}>
+        <form key={panel + (editing && panel === 'craft' ? editing.id : '')} onSubmit={submit}>
           <h2>{panel === 'craft' ? (editing ? 'Edit craft' : 'Add a craft') : panel === 'login' ? 'Log in' : 'Register'}</h2>
           {panel === 'craft' ? <>
             <label>Name<input name="name" defaultValue={editing?.name} required maxLength={200} /></label>
@@ -239,6 +243,8 @@ function App() {
 
                     <p>{craft.description}</p>
                     <p>📍 {craft.location}</p>
+                    <p>Materials: {craft.materials}</p>
+                    {craft.weight !== null && <p>Weight: {craft.weight} g</p>}
                     <small>{craft.category}</small>
                     {token && craft.can_edit && <div className="account-controls">
                       <button onClick={() => {
