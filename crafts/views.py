@@ -4,8 +4,8 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from rest_framework import serializers, status
 from rest_framework.authtoken.models import Token
-from rest_framework.generics import ListCreateAPIView
-from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly, BasePermission, SAFE_METHODS
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Craft
@@ -16,6 +16,22 @@ class CraftListView(ListCreateAPIView):
     queryset = Craft.objects.all()
     serializer_class = CraftSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
+class IsOwnerOrReadOnly(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return request.method in SAFE_METHODS or (
+            request.user.is_authenticated and obj.owner_id == request.user.pk
+        )
+
+
+class CraftDetailView(RetrieveUpdateDestroyAPIView):
+    queryset = Craft.objects.all()
+    serializer_class = CraftSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
 
 class RegisterView(APIView):
