@@ -22,9 +22,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from rest_framework.authtoken.views import obtain_auth_token
-from crafts.views import RegisterView
+from crafts.views import RegisterView, LogoutView
 
 urlpatterns = [
+    path('api/auth/logout/', LogoutView.as_view()),
     path('api/auth/register/', RegisterView.as_view()),
     path('api/auth/login/', obtain_auth_token),
     path('admin/', admin.site.urls),
