@@ -14,6 +14,7 @@ type Craft = {
   materials: string
   weight: number | null
   can_edit: boolean
+  tags: string[]
   image: string | null
   latitude: number | null
   longitude: number | null
@@ -141,7 +142,7 @@ function App() {
     craft.latitude !== null &&
     craft.longitude !== null &&
     (!token || !mineOnly || craft.can_edit) &&
-    [craft.name, craft.category, craft.location, craft.materials].some(value => value.toLowerCase().includes(search.trim().toLowerCase())) &&
+    [craft.name, craft.category, craft.location, craft.materials, ...craft.tags].some(value => value.toLowerCase().includes(search.trim().toLowerCase())) &&
     (!category || craft.category === category)
   )
 
@@ -180,7 +181,10 @@ function App() {
           {panel === 'craft' ? <>
             <label>Name<input name="name" defaultValue={editing?.name} required maxLength={200} /></label>
             <label>Description<textarea name="description" defaultValue={editing?.description} required /></label>
-            <label>Category<input name="category" defaultValue={editing?.category} required maxLength={100} /></label>
+            <label>Category<input list="craft-categories" name="category" defaultValue={editing?.category} required maxLength={100} /></label>
+            <datalist id="craft-categories">{categories.map(item => <option key={item} value={item} />)}</datalist>
+            <small>Choose an existing category or enter a new one.</small>
+            <label>Tags (comma separated)<input name="tag_names" maxLength={510} defaultValue={editing?.tags.join(', ')} placeholder="handmade, traditional" /></label>
             <label>Location (public region)<input name="location" defaultValue={editing?.location} required maxLength={200} /></label>
             <label>Materials<input name="materials" defaultValue={editing?.materials} required maxLength={200} /></label>
             <label>Weight (grams)<input name="weight" defaultValue={editing?.weight ?? ""} type="number" min="0" /></label>
@@ -246,6 +250,7 @@ function App() {
                     <p>Materials: {craft.materials}</p>
                     {craft.weight !== null && <p>Weight: {craft.weight} g</p>}
                     <small>{craft.category}</small>
+                    {craft.tags.length > 0 && <p>Tags: {craft.tags.join(', ')}</p>}
                     {token && craft.can_edit && <div className="account-controls">
                       <button onClick={() => {
                         setEditing(craft)
