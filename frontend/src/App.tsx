@@ -36,7 +36,7 @@ function App() {
   const [latitude, setLatitude] = useState('')
   const [longitude, setLongitude] = useState('')
   const [crafts, setCrafts] = useState<Craft[]>([])
-  const [token, setToken] = useState('')
+  const [token, setToken] = useState(() => sessionStorage.getItem('craftToken') || '')
   const [panel, setPanel] = useState<'login' | 'register' | 'craft' | ''>('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
@@ -59,6 +59,7 @@ function App() {
         setSearch('')
         setCategory('')
       } else {
+        sessionStorage.setItem('craftToken', data.token)
         setToken(data.token)
       }
       setPanel('')
@@ -69,6 +70,21 @@ function App() {
       setBusy(false)
     }
   }
+  async function logout() {
+    try {
+      const response = await fetch('/api/auth/logout/', {
+        method: 'POST', headers: { Authorization: 'Token ' + token },
+      })
+      if (!response.ok && response.status !== 401) throw new Error('Logout failed; please retry.')
+      sessionStorage.removeItem('craftToken')
+      setToken('')
+      setPanel('')
+      setNotice('Signed out.')
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Logout failed')
+    }
+  }
+
   async function deleteCraft(craft: Craft) {
     if (!window.confirm('Delete ' + craft.name + '?')) return
     try {
@@ -89,24 +105,33 @@ function App() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    const controller = new AbortController()
     async function loadCrafts() {
       try {
-        const response = await fetch('/api/crafts/', { headers: token ? { Authorization: 'Token ' + token } : {} })
+        const response = await fetch('/api/crafts/', { headers: token ? { Authorization: 'Token ' + token } : {}, signal: controller.signal })
+        if (response.status === 401 && token && !controller.signal.aborted) {
+          sessionStorage.removeItem('craftToken')
+          setToken('')
+          setPanel('')
+          setNotice('Session expired. Please log in again.')
+          return
+        }
 
         if (!response.ok) {
           throw new Error('Could not load crafts')
         }
 
         const data: Craft[] = await response.json()
-        setCrafts(data)
+        if (!controller.signal.aborted) { setCrafts(data); setError('') }
       } catch {
-        setError('Failed to connect to Django API')
+        if (!controller.signal.aborted) setError('Failed to connect to Django API')
       } finally {
-        setLoading(false)
+        if (!controller.signal.aborted) setLoading(false)
       }
     }
 
     loadCrafts()
+    return () => controller.abort()
   }, [token])
 
   const categories = [...new Set(crafts.map(craft => craft.category))].sort()
@@ -137,7 +162,7 @@ function App() {
         <div className="account-controls">
           {token ? <>
             <button onClick={() => { setEditing(null); setLatitude(''); setLongitude(''); setPanel('craft'); setNotice('') }}>Add a craft</button>
-            <button onClick={() => { setToken(''); setPanel(''); setNotice('Signed out locally.') }}>Log out</button>
+            <button onClick={() => void logout()}>Log out</button>
           </> : <>
             <button onClick={() => { setPanel('login'); setNotice('') }}>Log in</button>
             <button onClick={() => { setPanel('register'); setNotice('') }}>Register</button>
@@ -174,6 +199,7 @@ function App() {
             <label>Username<input name="username" required autoComplete="username" /></label>
             <label>Password<input name="password" type="password" required autoComplete={panel === 'login' ? 'current-password' : 'new-password'} /></label>
           </>}
+          {notice && <p role="status">{notice}</p>}
           <button disabled={busy} type="submit">{busy ? 'Please wait...' : panel === 'craft' ? (editing ? 'Save changes' : 'Publish craft') : 'Continue'}</button>
           <button disabled={busy} type="button" onClick={() => setPanel('')}>Cancel</button>
         </form>
