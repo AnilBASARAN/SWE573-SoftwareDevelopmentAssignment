@@ -59,3 +59,12 @@ class CraftAPITests(APITestCase):
         self.client.force_authenticate(user=user)
         url = f'/api/crafts/{craft.pk}/'
         self.assertEqual(self.client.patch(url, {'owner': user.pk}, format='json').status_code, 403)
+
+    def test_logout_revokes_token(self):
+        from rest_framework.authtoken.models import Token
+        user = get_user_model().objects.create_user(username='logoutuser')
+        token = Token.objects.create(user=user)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+        self.assertEqual(self.client.post('/api/auth/logout/').status_code, 204)
+        self.assertFalse(Token.objects.filter(user=user).exists())
+        self.assertEqual(self.client.post('/api/crafts/', self.payload).status_code, 401)
