@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import './App.css'
 
@@ -16,7 +16,21 @@ type Craft = {
   longitude: number | null
 }
 
+function LocationPicker({ onSelect }: { onSelect: (lat: string, lng: string) => void }) {
+  useMapEvents({
+    click(event) {
+      const { lat, lng } = event.latlng
+      if (lat >= -85 && lat <= 85 && lng >= -180 && lng <= 180) {
+        onSelect(lat.toFixed(2), lng.toFixed(2))
+      }
+    },
+  })
+  return null
+}
+
 function App() {
+  const [latitude, setLatitude] = useState('')
+  const [longitude, setLongitude] = useState('')
   const [crafts, setCrafts] = useState<Craft[]>([])
   const [token, setToken] = useState('')
   const [panel, setPanel] = useState<'login' | 'register' | 'craft' | ''>('')
@@ -104,7 +118,7 @@ function App() {
         </div>
         <div className="account-controls">
           {token ? <>
-            <button onClick={() => { setPanel('craft'); setNotice('') }}>Add a craft</button>
+            <button onClick={() => { setLatitude(''); setLongitude(''); setPanel('craft'); setNotice('') }}>Add a craft</button>
             <button onClick={() => { setToken(''); setPanel(''); setNotice('Signed out locally.') }}>Log out</button>
           </> : <>
             <button onClick={() => { setPanel('login'); setNotice('') }}>Log in</button>
@@ -123,8 +137,20 @@ function App() {
             <label>Location (public region)<input name="location" required maxLength={200} /></label>
             <label>Materials<input name="materials" required maxLength={200} /></label>
             <label>Weight (grams)<input name="weight" type="number" min="0" /></label>
-            <label>Latitude (approximate)<input name="latitude" type="number" step="any" min="-85" max="85" required /></label>
-            <label>Longitude (approximate)<input name="longitude" type="number" step="any" min="-180" max="180" required /></label>
+            <p>Select an approximate public location on the map. Do not mark a private address.</p>
+            <MapContainer center={[20, 0]} zoom={1} minZoom={1}
+              maxBounds={[[-85, -180], [85, 180]]}
+              style={{ height: 220, width: '100%', marginBottom: 12 }}>
+              <TileLayer noWrap attribution="&copy; OpenStreetMap contributors"
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <LocationPicker onSelect={(lat, lng) => { setLatitude(lat); setLongitude(lng) }} />
+              {latitude !== '' && longitude !== '' &&
+                Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude)) &&
+                Math.abs(Number(latitude)) <= 85 && Math.abs(Number(longitude)) <= 180 &&
+                <Marker position={[Number(latitude), Number(longitude)]} />}
+            </MapContainer>
+            <label>Latitude (approximate)<input name="latitude" type="number" step="any" min="-85" max="85" required value={latitude} onChange={event => setLatitude(event.target.value)} /></label>
+            <label>Longitude (approximate)<input name="longitude" type="number" step="any" min="-180" max="180" required value={longitude} onChange={event => setLongitude(event.target.value)} /></label>
             <label>Photo<input name="image" type="file" accept="image/*" /></label>
           </> : <>
             <label>Username<input name="username" required autoComplete="username" /></label>
