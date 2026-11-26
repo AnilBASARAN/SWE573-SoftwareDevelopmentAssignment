@@ -68,3 +68,19 @@ class CraftAPITests(APITestCase):
         self.assertEqual(self.client.post('/api/auth/logout/').status_code, 204)
         self.assertFalse(Token.objects.filter(user=user).exists())
         self.assertEqual(self.client.post('/api/crafts/', self.payload).status_code, 401)
+
+    def test_reusable_tags(self):
+        from .models import Tag
+        user = get_user_model().objects.create_user(username='tagger')
+        self.client.force_authenticate(user=user)
+        for name in ['First craft', 'Second craft']:
+            response = self.client.post('/api/crafts/', {
+                **self.payload, 'name': name, 'tag_names': 'Handmade, wool, handmade',
+            }, format='json')
+            self.assertEqual(response.status_code, 201)
+            self.assertEqual(set(response.data['tags']), {'handmade', 'wool'})
+        self.assertEqual(Tag.objects.count(), 2)
+        url = f"/api/crafts/{response.data['id']}/"
+        updated = self.client.patch(url, {'tag_names': ''}, format='json')
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(updated.data['tags'], [])
