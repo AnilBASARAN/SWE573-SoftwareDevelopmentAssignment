@@ -11,6 +11,9 @@ type Craft = {
   description: string
   category: string
   location: string
+  materials: string
+  weight: number | null
+  can_edit: boolean
   image: string | null
   latitude: number | null
   longitude: number | null
@@ -29,6 +32,7 @@ function LocationPicker({ onSelect }: { onSelect: (lat: string, lng: string) => 
 }
 
 function App() {
+  const [editing, setEditing] = useState<Craft | null>(null)
   const [latitude, setLatitude] = useState('')
   const [longitude, setLongitude] = useState('')
   const [crafts, setCrafts] = useState<Craft[]>([])
@@ -43,28 +47,42 @@ function App() {
     setNotice('')
     try {
       const creating = panel === 'craft'
-      const response = await fetch(creating ? '/api/crafts/' : '/api/auth/' + panel + '/', {
-        method: 'POST',
+      const response = await fetch(creating ? (editing ? `/api/crafts/${editing.id}/` : '/api/crafts/') : '/api/auth/' + panel + '/', {
+        method: creating && editing ? 'PATCH' : 'POST',
         headers: creating ? { Authorization: 'Token ' + token } : { 'Content-Type': 'application/json' },
         body: creating ? (form.get('image') instanceof File && (form.get('image') as File).size === 0 ? (form.delete('image'), form) : form) : JSON.stringify({ username: form.get('username'), password: form.get('password') }),
       })
       const data = await response.json()
       if (!response.ok) throw new Error(JSON.stringify(data))
       if (creating) {
-        setCrafts(previous => [...previous, data as Craft])
+        setCrafts(previous => editing ? previous.map(craft => craft.id === editing.id ? data as Craft : craft) : [...previous, data as Craft])
         setSearch('')
         setCategory('')
       } else {
         setToken(data.token)
       }
       setPanel('')
-      setNotice(creating ? 'Craft published!' : 'Signed in successfully.')
+      setNotice(creating ? (editing ? 'Craft updated!' : 'Craft published!') : 'Signed in successfully.')
     } catch (err) {
       setNotice(err instanceof Error ? err.message : 'Request failed')
     } finally {
       setBusy(false)
     }
   }
+  async function deleteCraft(craft: Craft) {
+    if (!window.confirm('Delete ' + craft.name + '?')) return
+    try {
+      const response = await fetch('/api/crafts/' + craft.id + '/', {
+        method: 'DELETE', headers: { Authorization: 'Token ' + token },
+      })
+      if (!response.ok) throw new Error('Could not delete craft')
+      setCrafts(previous => previous.filter(item => item.id !== craft.id))
+      setNotice('Craft deleted.')
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Request failed')
+    }
+  }
+
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [loading, setLoading] = useState(true)
@@ -73,7 +91,7 @@ function App() {
   useEffect(() => {
     async function loadCrafts() {
       try {
-        const response = await fetch('/api/crafts/')
+        const response = await fetch('/api/crafts/', { headers: token ? { Authorization: 'Token ' + token } : {} })
 
         if (!response.ok) {
           throw new Error('Could not load crafts')
@@ -89,7 +107,7 @@ function App() {
     }
 
     loadCrafts()
-  }, [])
+  }, [token])
 
   const categories = [...new Set(crafts.map(craft => craft.category))].sort()
   const visibleCrafts = crafts.filter(craft =>
@@ -118,7 +136,7 @@ function App() {
         </div>
         <div className="account-controls">
           {token ? <>
-            <button onClick={() => { setLatitude(''); setLongitude(''); setPanel('craft'); setNotice('') }}>Add a craft</button>
+            <button onClick={() => { setEditing(null); setLatitude(''); setLongitude(''); setPanel('craft'); setNotice('') }}>Add a craft</button>
             <button onClick={() => { setToken(''); setPanel(''); setNotice('Signed out locally.') }}>Log out</button>
           </> : <>
             <button onClick={() => { setPanel('login'); setNotice('') }}>Log in</button>
@@ -129,16 +147,16 @@ function App() {
       </header>
       {panel && <section className="form-panel">
         <form key={panel} onSubmit={submit}>
-          <h2>{panel === 'craft' ? 'Add a craft' : panel === 'login' ? 'Log in' : 'Register'}</h2>
+          <h2>{panel === 'craft' ? (editing ? 'Edit craft' : 'Add a craft') : panel === 'login' ? 'Log in' : 'Register'}</h2>
           {panel === 'craft' ? <>
-            <label>Name<input name="name" required maxLength={200} /></label>
-            <label>Description<textarea name="description" required /></label>
-            <label>Category<input name="category" required maxLength={100} /></label>
-            <label>Location (public region)<input name="location" required maxLength={200} /></label>
-            <label>Materials<input name="materials" required maxLength={200} /></label>
-            <label>Weight (grams)<input name="weight" type="number" min="0" /></label>
+            <label>Name<input name="name" defaultValue={editing?.name} required maxLength={200} /></label>
+            <label>Description<textarea name="description" defaultValue={editing?.description} required /></label>
+            <label>Category<input name="category" defaultValue={editing?.category} required maxLength={100} /></label>
+            <label>Location (public region)<input name="location" defaultValue={editing?.location} required maxLength={200} /></label>
+            <label>Materials<input name="materials" defaultValue={editing?.materials} required maxLength={200} /></label>
+            <label>Weight (grams)<input name="weight" defaultValue={editing?.weight ?? ""} type="number" min="0" /></label>
             <p>Select an approximate public location on the map. Do not mark a private address.</p>
-            <MapContainer center={[20, 0]} zoom={1} minZoom={1}
+            <MapContainer center={editing && editing.latitude !== null && editing.longitude !== null ? [editing.latitude, editing.longitude] : [20, 0]} zoom={editing ? 5 : 1} minZoom={1}
               maxBounds={[[-85, -180], [85, 180]]}
               style={{ height: 220, width: '100%', marginBottom: 12 }}>
               <TileLayer noWrap attribution="&copy; OpenStreetMap contributors"
@@ -156,7 +174,7 @@ function App() {
             <label>Username<input name="username" required autoComplete="username" /></label>
             <label>Password<input name="password" type="password" required autoComplete={panel === 'login' ? 'current-password' : 'new-password'} /></label>
           </>}
-          <button disabled={busy} type="submit">{busy ? 'Please wait...' : panel === 'craft' ? 'Publish craft' : 'Continue'}</button>
+          <button disabled={busy} type="submit">{busy ? 'Please wait...' : panel === 'craft' ? (editing ? 'Save changes' : 'Publish craft') : 'Continue'}</button>
           <button disabled={busy} type="button" onClick={() => setPanel('')}>Cancel</button>
         </form>
       </section>}
@@ -196,6 +214,16 @@ function App() {
                     <p>{craft.description}</p>
                     <p>📍 {craft.location}</p>
                     <small>{craft.category}</small>
+                    {token && craft.can_edit && <div className="account-controls">
+                      <button onClick={() => {
+                        setEditing(craft)
+                        setLatitude(String(craft.latitude ?? ''))
+                        setLongitude(String(craft.longitude ?? ''))
+                        setNotice('')
+                        setPanel('craft')
+                      }}>Edit</button>
+                      <button onClick={() => void deleteCraft(craft)}>Delete</button>
+                    </div>}
                   </div>
                 </Popup>
               </Marker>
