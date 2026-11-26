@@ -4,9 +4,16 @@ from .models import Craft
 
 
 class CraftSerializer(serializers.ModelSerializer):
+    can_edit = serializers.SerializerMethodField()
+
+    def get_can_edit(self, obj):
+        request = self.context.get('request')
+        return bool(request and request.user.is_authenticated and obj.owner_id == request.user.pk)
+
     class Meta:
         model = Craft
-        fields = '__all__'
+        fields = ['id', 'name', 'description', 'category', 'location', 'materials',
+                  'weight', 'image', 'latitude', 'longitude', 'can_edit']
 
     def validate_image(self, value):
         if value and value.size > 5 * 1024 * 1024:
@@ -14,8 +21,8 @@ class CraftSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        lat = attrs.get('latitude')
-        lon = attrs.get('longitude')
+        lat = attrs.get('latitude', getattr(self.instance, 'latitude', None))
+        lon = attrs.get('longitude', getattr(self.instance, 'longitude', None))
         if (lat is None) != (lon is None):
             raise serializers.ValidationError('Provide both latitude and longitude.')
         if lat is not None and (not math.isfinite(lat) or not -85 <= lat <= 85):
