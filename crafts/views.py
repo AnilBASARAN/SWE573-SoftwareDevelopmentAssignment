@@ -5,7 +5,8 @@ from django.db import IntegrityError, transaction
 from rest_framework import serializers, status
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly, BasePermission, SAFE_METHODS
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly, BasePermission, SAFE_METHODS, IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Craft
@@ -56,3 +57,12 @@ class RegisterView(APIView):
         except IntegrityError:
             return Response({'detail': 'Username already exists.'}, status=400)
         return Response({'token': token.key}, status=status.HTTP_201_CREATED)
+
+
+class LogoutView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        request.auth.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
