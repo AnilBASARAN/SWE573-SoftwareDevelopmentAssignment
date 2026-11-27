@@ -13,6 +13,8 @@ type Craft = {
   location: string
   materials: string
   weight: number | null
+  volume: string | null
+  production_process: string
   can_edit: boolean
   tags: string[]
   image: string | null
@@ -187,6 +189,8 @@ function App() {
             <label>Tags (comma separated)<input name="tag_names" maxLength={510} defaultValue={editing?.tags.join(', ')} placeholder="handmade, traditional" /></label>
             <label>Location (public region)<input name="location" defaultValue={editing?.location} required maxLength={200} /></label>
             <label>Materials<input name="materials" defaultValue={editing?.materials} required maxLength={200} /></label>
+            <label>Production process<textarea name="production_process" defaultValue={editing?.production_process} /></label>
+            <label>Volume (liters)<input name="volume" type="number" min="0" max="9999999.999" step="0.001" defaultValue={editing?.volume ?? ''} /></label>
             <label>Weight (grams)<input name="weight" defaultValue={editing?.weight ?? ""} type="number" min="0" /></label>
             <p>Select an approximate public location on the map. Do not mark a private address.</p>
             <MapContainer center={editing && editing.latitude !== null && editing.longitude !== null ? [editing.latitude, editing.longitude] : [20, 0]} zoom={editing ? 5 : 1} minZoom={1}
@@ -249,6 +253,8 @@ function App() {
                     <p>📍 {craft.location}</p>
                     <p>Materials: {craft.materials}</p>
                     {craft.weight !== null && <p>Weight: {craft.weight} g</p>}
+                    {craft.volume !== null && <p>Volume: {craft.volume} L</p>}
+                    {craft.production_process && <p>How it is made: {craft.production_process}</p>}
                     <small>{craft.category}</small>
                     {craft.tags.length > 0 && <p>Tags: {craft.tags.join(', ')}</p>}
                     {token && craft.can_edit && <div className="account-controls">
