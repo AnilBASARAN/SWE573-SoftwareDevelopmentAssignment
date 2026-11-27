@@ -9,12 +9,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly, Base
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Craft
+from .models import Craft, Category
 from .serializers import CraftSerializer
 
 
 class CraftListView(ListCreateAPIView):
-    queryset = Craft.objects.all()
+    queryset = Craft.objects.select_related('category').prefetch_related('tags')
     serializer_class = CraftSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
@@ -66,3 +66,22 @@ class LogoutView(APIView):
     def post(self, request):
         request.auth.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CategoryListView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response(list(Category.objects.filter(approved=True).order_by('name').values_list('name', flat=True)))
+
+
+class CategorySuggestionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        name = serializers.CharField(max_length=100).run_validation(request.data.get('name'))
+        existing = Category.objects.filter(name__iexact=name).first()
+        if existing:
+            return Response({'name': existing.name, 'approved': existing.approved})
+        category, created = Category.objects.get_or_create(name=name)
+        return Response({'name': category.name, 'approved': category.approved}, status=201 if created else 200)
