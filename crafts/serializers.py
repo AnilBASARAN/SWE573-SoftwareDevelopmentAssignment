@@ -1,10 +1,11 @@
 import math
 from rest_framework import serializers
-from .models import Craft, Tag
+from .models import Craft, Tag, Category
 from django.db import transaction
 
 
 class CraftSerializer(serializers.ModelSerializer):
+    category = serializers.SlugRelatedField(slug_field='name', queryset=Category.objects.filter(approved=True))
     volume = serializers.DecimalField(max_digits=10, decimal_places=3, min_value=0, required=False, allow_null=True)
     tags = serializers.SlugRelatedField(slug_field='name', many=True, read_only=True)
     tag_names = serializers.CharField(write_only=True, required=False, allow_blank=True, max_length=510)
