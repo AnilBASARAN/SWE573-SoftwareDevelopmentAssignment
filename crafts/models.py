@@ -3,6 +3,14 @@ from django.conf import settings
 from django.db import models
 
 
+class Category(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    approved = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.name
+
+
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True)
 
@@ -16,7 +24,7 @@ class Craft(models.Model):
                               on_delete=models.SET_NULL, related_name='crafts')
     name = models.CharField(max_length=200)
     description = models.TextField()
-    category = models.CharField(max_length=100)
+    category = models.ForeignKey(Category, to_field='name', on_delete=models.PROTECT, related_name='crafts')
     location = models.CharField(max_length=200)
     materials = models.CharField(max_length=200)
     production_process = models.TextField(blank=True, default='')
