@@ -5,6 +5,7 @@ from django.db import transaction
 
 
 class CraftSerializer(serializers.ModelSerializer):
+    volume = serializers.DecimalField(max_digits=10, decimal_places=3, min_value=0, required=False, allow_null=True)
     tags = serializers.SlugRelatedField(slug_field='name', many=True, read_only=True)
     tag_names = serializers.CharField(write_only=True, required=False, allow_blank=True, max_length=510)
 
@@ -38,7 +39,7 @@ class CraftSerializer(serializers.ModelSerializer):
     class Meta:
         model = Craft
         fields = ['id', 'name', 'description', 'category', 'location', 'materials',
-                  'weight', 'image', 'latitude', 'longitude', 'can_edit', 'tags', 'tag_names']
+                  'weight', 'volume', 'production_process', 'image', 'latitude', 'longitude', 'can_edit', 'tags', 'tag_names']
 
     def validate_image(self, value):
         if value and value.size > 5 * 1024 * 1024:
