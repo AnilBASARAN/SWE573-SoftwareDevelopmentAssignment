@@ -19,6 +19,8 @@ class Craft(models.Model):
     category = models.CharField(max_length=100)
     location = models.CharField(max_length=200)
     materials = models.CharField(max_length=200)
+    production_process = models.TextField(blank=True, default='')
+    volume = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
     weight = models.PositiveIntegerField(null=True, blank=True)
 
     image = models.ImageField(
