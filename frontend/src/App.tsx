@@ -35,6 +35,8 @@ function LocationPicker({ onSelect }: { onSelect: (lat: string, lng: string) => 
 }
 
 function App() {
+  const [categories, setCategories] = useState<string[]>([])
+  const [suggestion, setSuggestion] = useState('')
   const [editing, setEditing] = useState<Craft | null>(null)
   const [latitude, setLatitude] = useState('')
   const [longitude, setLongitude] = useState('')
@@ -139,7 +141,29 @@ function App() {
     return () => controller.abort()
   }, [token])
 
-  const categories = [...new Set(crafts.map(craft => craft.category))].sort()
+  useEffect(() => {
+    fetch('/api/crafts/categories/')
+      .then(response => { if (!response.ok) throw new Error('Category request failed'); return response.json() })
+      .then((data: string[]) => setCategories(data))
+      .catch(() => setNotice('Could not load categories.'))
+  }, [panel])
+
+  async function suggestCategory() {
+    try {
+      const response = await fetch('/api/crafts/categories/suggest/', {
+        method: 'POST',
+        headers: { Authorization: 'Token ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: suggestion.trim() }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(JSON.stringify(data))
+      if (data.approved) setCategories(previous => [...new Set([...previous, data.name as string])].sort())
+      setNotice(data.approved ? 'Category is already available.' : 'Category submitted for administrator approval.')
+      setSuggestion('')
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Suggestion failed')
+    }
+  }
   const visibleCrafts = crafts.filter(craft =>
     craft.latitude !== null &&
     craft.longitude !== null &&
@@ -183,9 +207,12 @@ function App() {
           {panel === 'craft' ? <>
             <label>Name<input name="name" defaultValue={editing?.name} required maxLength={200} /></label>
             <label>Description<textarea name="description" defaultValue={editing?.description} required /></label>
-            <label>Category<input list="craft-categories" name="category" defaultValue={editing?.category} required maxLength={100} /></label>
-            <datalist id="craft-categories">{categories.map(item => <option key={item} value={item} />)}</datalist>
-            <small>Choose an existing category or enter a new one.</small>
+            <label>Category<select name="category" defaultValue={editing?.category ?? ''} required>
+              <option value="">Select a category</option>
+              {categories.map(item => <option key={item} value={item}>{item}</option>)}
+            </select></label>
+            <label>Suggest a new category<input value={suggestion} maxLength={100} onChange={event => setSuggestion(event.target.value)} /></label>
+            <button type="button" disabled={!suggestion.trim()} onClick={() => void suggestCategory()}>Submit suggestion</button>
             <label>Tags (comma separated)<input name="tag_names" maxLength={510} defaultValue={editing?.tags.join(', ')} placeholder="handmade, traditional" /></label>
             <label>Location (public region)<input name="location" defaultValue={editing?.location} required maxLength={200} /></label>
             <label>Materials<input name="materials" defaultValue={editing?.materials} required maxLength={200} /></label>
