@@ -54,7 +54,7 @@ class CraftAPITests(APITestCase):
 
     def test_legacy_craft_cannot_be_claimed(self):
         from .models import Craft
-        craft = Craft.objects.create(**self.payload)
+        craft = Craft.objects.create(**{**self.payload, 'category': __import__('crafts.models', fromlist=['Category']).Category.objects.get(name=self.payload['category'])})
         user = get_user_model().objects.create_user(username='contributor')
         self.client.force_authenticate(user=user)
         url = f'/api/crafts/{craft.pk}/'
@@ -97,3 +97,15 @@ class CraftAPITests(APITestCase):
         self.assertEqual(self.client.post('/api/crafts/', {
             **self.payload, 'volume': '-1',
         }, format='json').status_code, 400)
+
+    def test_category_suggestion_requires_approval(self):
+        from .models import Category
+        user = get_user_model().objects.create_user(username='suggestor')
+        self.client.force_authenticate(user=user)
+        response = self.client.post('/api/crafts/categories/suggest/', {'name': 'Metalwork'}, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertNotIn('Metalwork', self.client.get('/api/crafts/categories/').data)
+        payload = {**self.payload, 'category': 'Metalwork'}
+        self.assertEqual(self.client.post('/api/crafts/', payload, format='json').status_code, 400)
+        Category.objects.filter(name='Metalwork').update(approved=True)
+        self.assertEqual(self.client.post('/api/crafts/', payload, format='json').status_code, 201)
