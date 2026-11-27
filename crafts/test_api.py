@@ -84,3 +84,16 @@ class CraftAPITests(APITestCase):
         updated = self.client.patch(url, {'tag_names': ''}, format='json')
         self.assertEqual(updated.status_code, 200)
         self.assertEqual(updated.data['tags'], [])
+
+    def test_production_and_volume(self):
+        user = get_user_model().objects.create_user(username='maker')
+        self.client.force_authenticate(user=user)
+        response = self.client.post('/api/crafts/', {
+            **self.payload, 'production_process': 'Hand shaped', 'volume': '1.250',
+        }, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['volume'], '1.250')
+        self.assertEqual(response.data['production_process'], 'Hand shaped')
+        self.assertEqual(self.client.post('/api/crafts/', {
+            **self.payload, 'volume': '-1',
+        }, format='json').status_code, 400)
